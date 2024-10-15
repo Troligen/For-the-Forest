@@ -1,4 +1,5 @@
 import random
+import sys
 
 import pygame
 
@@ -27,20 +28,22 @@ class Game:
 
     def run(self):
 
-        running = True
-        while running:
+        while True:
 
             self.display.fill((0, 0, 0))
             self.screen.blit(pygame.transform.scale(self.display, (1000, 800)), (0, 0))
 
             for mushroom in self.list_mushrooms:
                 if self.mouse_pos:
-                    mushroom.update(self.mouse_pos)
+                    mushroom.set_target(self.mouse_pos)
+                    mushroom.update(self.list_mushrooms)
                 mushroom.render(self.display)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False
+                    pygame.quit()
+                    sys.exit()
+
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
                         screen_mouse_pos = pygame.mouse.get_pos()
