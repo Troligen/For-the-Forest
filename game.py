@@ -15,16 +15,17 @@ class Game:
         self.display = pygame.Surface((500, 400))
         self.num_mushrooms = 15
         self.list_mushrooms = []
+        self.mouse_pos = []
 
         self.clock = pygame.time.Clock()
         self.movement = [False, False]
 
-    def run(self):
-
-        for mushroom in range(15):
+        for _ in range(15):
             self.list_mushrooms.append(
                 Entities(self, (random.randint(0, 500), random.randint(0, 400)))
             )
+
+    def run(self):
 
         running = True
         while running:
@@ -33,16 +34,20 @@ class Game:
             self.screen.blit(pygame.transform.scale(self.display, (1000, 800)), (0, 0))
 
             for mushroom in self.list_mushrooms:
+                if self.mouse_pos:
+                    mushroom.update(self.mouse_pos)
                 mushroom.render(self.display)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_w:
-                        self.movement[0] = True
-                    if event.key == pygame.K_s:
-                        self.movement[1] = True
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        screen_mouse_pos = pygame.mouse.get_pos()
+                        self.mouse_pos = [
+                            screen_mouse_pos[0] * 500 // 1000,
+                            screen_mouse_pos[1] * 400 // 800,
+                        ]
 
             pygame.transform.scale(self.display, (1000, 800), self.screen)
             pygame.display.update()
