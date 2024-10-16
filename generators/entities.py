@@ -1,4 +1,3 @@
-import math
 from typing import TYPE_CHECKING, Final
 
 from pygame import FRect, Surface, Vector2
@@ -15,36 +14,18 @@ class Entities:
         self.game = game
         self.pos = Vector2(pos)
         self.size = size
-        self.speed = 2
+        self.max_speed = 2
+        self.max_force = 0.1
         self.target = None
-        self.velocities = Vector2(0, 0)
+        self.velocity = Vector2(0, 0)
 
-    def check_collision(
-        self, new_pos: Vector2, ent_list: list["Entities"]
-    ) -> tuple[bool, bool]:
+    def check_collision(self, new_pos: Vector2, ent_list: list["Entities"]) -> bool:
 
-        new_rect = FRect(new_pos, (self.size, self.size))
-        collision_x, collision_y = False, False
-
+        new_rect = FRect(new_pos.x, new_pos.y, self.size, self.size)
         for ent in ent_list:
-            if ent != self:
-                other_rect = ent.get_rect()
-                if new_rect.colliderect(other_rect):
-                    if self.pos.x < ent.pos.x:
-                        collision_x = new_rect.right > other_rect.left
-                    else:
-                        collision_x = new_rect.left < other_rect.right
-
-                    if self.pos.y < ent.pos.y:
-                        collision_y = new_rect.bottom > other_rect.top
-                    else:
-                        collision_y = new_rect.top < other_rect.bottom
-
-                    if collision_x and collision_y:
-                        break
-
-        print(f"Collision X: {collision_x}, Collision Y: {collision_y}")
-        return collision_x, collision_y
+            if ent != self and new_rect.colliderect(ent.get_rect()):
+                return True
+        return False
 
     def get_rect(self):
         return FRect(self.pos, (self.size, self.size))
@@ -52,38 +33,67 @@ class Entities:
     def set_target(self, target_pos: tuple[int, int]):
         self.target = Vector2(target_pos)
 
+    def seek(self, target: Vector2) -> Vector2:
+        desired = target - self.pos
+        if desired.length() > 0:
+            desired = desired.normalize() * self.max_speed
+        return desired - self.velocity
+
+    def avoid_obstacles(self, ent_list: list["Entities"]) -> Vector2:
+        if self.velocity.length() != 0:
+            ahead = self.pos + self.velocity.normalize() * 30  # Look ahead
+        else:
+            ahead = self.pos * 30
+        avoidance = Vector2(0, 0)
+        for ent in ent_list:
+            if ent != self:
+                to_obstacle = ent.pos - self.pos
+                dist = to_obstacle.length()
+                if dist < 50:  # Detection radius
+                    if ahead.distance_to(ent.pos) <= self.size + ent.size:
+                        avoidance -= to_obstacle.normalize()
+        return (
+            avoidance.normalize() * self.max_force
+            if avoidance.length() > 0
+            else avoidance
+        )
+
     def update(self, ent_list: list["Entities"]) -> None:
 
         if self.target:
-            direction = self.target - self.pos
+            steering = Vector2(0, 0)
 
-            if direction.length() > self.speed:
-                self.velocity = direction.normalize() * self.speed
-            else:
-                self.velocity = direction
-                self.target = None
+            steering += self.seek(self.target)
+
+            steering += self.avoid_obstacles(ent_list) * 1.5
+
+            if steering.length() > self.max_force:
+                steering = steering.normalize() * self.max_force
+
+            self.velocity += steering
+            if self.velocity.length() > self.max_speed:
+                self.velocities = self.velocity.normalize() * self.max_speed
 
             new_pos = self.pos + self.velocity
-            collision_x, collision_y = self.check_collision(new_pos, ent_list)
-
-            if not collision_x:
-                self.pos.x = new_pos.x
+            if not self.check_collision(new_pos, ent_list):
+                self.pos = new_pos
             else:
-                self.velocity.x = 0
+                # If collision, try to slide along the collision
+                new_pos_x = Vector2(new_pos.x, self.pos.y)
+                new_pos_y = Vector2(self.pos.x, new_pos.y)
 
-            if not collision_y:
-                self.pos.y = new_pos.y
-            else:
-                self.velocity.y = 0
+                if not self.check_collision(new_pos_x, ent_list):
+                    self.pos = new_pos_x
+                    self.velocity.y = 0
+                elif not self.check_collision(new_pos_y, ent_list):
+                    self.pos = new_pos_y
+                    self.velocity.x = 0
+                else:
+                    self.velocity = Vector2(0, 0)  # Stop if can't move in any direction
 
-            if collision_x and collision_y:
-                slide_x = Vector2(self.velocity.x, 0)
-                slide_y = Vector2(0, self.velocity.y)
-
-                if not self.check_collision(self.pos + slide_x, ent_list)[0]:
-                    self.pos += slide_x
-                elif not self.check_collision(self.pos + slide_y, ent_list)[1]:
-                    self.pos += slide_y
+            if self.pos.distance_to(self.target) < self.max_speed:
+                self.target = None
+                self.velocity = Vector2(0, 0)
 
     def render(self, surf: Surface):
-        surf.fill((255, 255, 255), FRect(self.pos, (self.size, self.size)))
+        surf.fill((255, 255, 255), self.get_rect())

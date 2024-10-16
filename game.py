@@ -45,7 +45,7 @@ class Game:
                     sys.exit()
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:
+                    if event.button == 2:
                         screen_mouse_pos = pygame.mouse.get_pos()
                         self.mouse_pos = [
                             screen_mouse_pos[0] * 500 // 1000,
