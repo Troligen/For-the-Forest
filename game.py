@@ -17,6 +17,7 @@ class Game:
         self.num_mushrooms = 15
         self.list_mushrooms = []
         self.mouse_pos = []
+        self.targeted_units = []
 
         self.clock = pygame.time.Clock()
         self.movement = [False, False]
@@ -31,7 +32,6 @@ class Game:
         while True:
 
             self.display.fill((0, 0, 0))
-            self.screen.blit(pygame.transform.scale(self.display, (1000, 800)), (0, 0))
 
             for mushroom in self.list_mushrooms:
                 if self.mouse_pos:
@@ -45,7 +45,7 @@ class Game:
                     sys.exit()
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 2:
+                    if event.button == 3:
                         screen_mouse_pos = pygame.mouse.get_pos()
                         self.mouse_pos = [
                             screen_mouse_pos[0] * 500 // 1000,
